@@ -1,0 +1,34 @@
+.build_job:
+  rules:
+    # Fix for job missing in 'detached pipeline'.
+    - when: on_success
+
+.prod_job:
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^master|release\/.*$/'
+
+.prod_job_manual:
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^master|release\/.*$/'
+      when: manual
+      allow_failure: true
+
+.stage_job:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+
+.stage_job_manual:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      when: manual
+      allow_failure: true
+
+.test_job:
+  rules:
+    - if: '$CI_COMMIT_BRANCH !~ /^master|develop\/.*|release\/.*$/'
+
+.test_job_manual:
+  rules:
+    - if: '$CI_COMMIT_BRANCH !~ /^master|develop\/.*|release\/.*$/'
+      when: manual
+      allow_failure: true
