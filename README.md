@@ -1,2 +1,3 @@
-# gitlab-templates
-A collection of pipeline templates for GitLab CI
+# Pipeline templates for GitLab CI
+
+A collection of pipeline templates for GitLab CI.

@@ -1,0 +1,27 @@
+#
+# Gitlab CI template for building Javascript application utilizing Rush
+# monorepo.
+#
+
+.rush_init:
+  before_script:
+    - node common/scripts/install-run-rush.js install
+  cache:
+    key:
+      files:
+        - common/config/rush/pnpm-lock.yaml
+      prefix: ${CI_COMMIT_SHORT_SHA}
+    policy: pull-push
+    untracked: true
+  image: node:16
+
+.rush_build:
+  artifacts:
+    expire_in: 7 days
+    name: Build product
+    untracked: true
+  cache:
+    policy: pull
+  extends: .rush_init
+  script:
+    - node common/scripts/install-run-rush.js build --verbose
