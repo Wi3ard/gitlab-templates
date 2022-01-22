@@ -10,7 +10,7 @@
     key:
       files:
         - common/config/rush/pnpm-lock.yaml
-      prefix: ${CI_COMMIT_SHORT_SHA}
+      prefix: $CI_COMMIT_SHORT_SHA
     policy: pull-push
     untracked: true
   image: node:16

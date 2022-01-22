@@ -1,0 +1,68 @@
+#
+# Gitlab CI template for building Docker images.
+#
+
+.docker_build:
+  after_script:
+    - cd -
+  before_script:
+    - cd ${PROJECT_DIR}
+  script:
+    - docker pull ${IMAGE_NAME} || true
+    - docker build --cache-from ${IMAGE_NAME}:latest -t
+      ${IMAGE_NAME}:${IMAGE_TAG} -t ${IMAGE_NAME}:latest ${TARGET:+--target
+      $TARGET} .
+    - docker push ${IMAGE_NAME}:${IMAGE_TAG}
+    - docker push ${IMAGE_NAME}:latest
+  variables:
+    IMAGE_NAME: CHANGEME
+    IMAGE_TAG: CHANGEME
+    PROJECT_DIR: .
+    TARGET: CHANGEME
+
+# AWS ECR support.
+
+.docker_ecr_build:
+  before_script:
+    - !reference [.docker_ecr_login, before_script]
+    - !reference [.docker_build, before_script]
+  extends:
+    - .docker_build
+    - .docker_ecr_login
+  script:
+    - !reference [.docker_ecr_login, script]
+    - !reference [.docker_build, script]
+
+.docker_ecr_init:
+  before_script:
+    - amazon-linux-extras install docker
+    - aws --version
+  image:
+    name: amazon/aws-cli
+    entrypoint: [""]
+
+.docker_ecr_login:
+  extends: .docker_ecr_init
+  script:
+    - export AWS_ACCESS_KEY_ID=$DOCKER_AWS_ACCESS_KEY_ID
+    - export AWS_SECRET_ACCESS_KEY=$DOCKER_AWS_SECRET_ACCESS_KEY
+    - export AWS_DEFAULT_REGION=$DOCKER_AWS_DEFAULT_REGION
+    - aws ecr get-login-password | docker login --username AWS --password-stdin
+      $DOCKER_REGISTRY
+  variables:
+    DOCKER_AWS_ACCESS_KEY_ID: CHANGEME
+    DOCKER_AWS_DEFAULT_REGION: CHANGEME
+    DOCKER_AWS_SECRET_ACCESS_KEY: CHANGEME
+    DOCKER_REGISTRY: CHANGEME
+
+# Google Artifact Registry support.
+
+.docker_gcp_ar_login:
+  image:
+    name: docker:latest
+  script:
+    - echo ${KEY_FILE_BASE64} | docker login -u _json_key_base64
+      --password-stdin https://${LOCATION}-docker.pkg.dev
+  variables:
+    KEY_FILE_BASE64: CHANGEME
+    LOCATION: CHANGEME
