@@ -1,5 +1,21 @@
+###############################################################################
+# Gitlab CI templates for building Docker images.
 #
-# Gitlab CI template for building Docker images.
+
+#
+# Build a Docker image.
+#
+# The following variables are required:
+#
+# DOCKER_IMAGE: The name of the Docker image to build.
+# DOCKER_IMAGE_TAG: The tag of the Docker image to build.
+#
+# The following variables are optional:
+#
+# DOCKER_BUILD_CONTEXT: The path to the Docker build context.
+# DOCKERFILE_PATH: Path to the Dockerfile.
+# PROJECT_DIR: The path to the project directory.
+# TARGET: The name of the Dockerfile target to build.
 #
 
 .docker_build:
@@ -8,19 +24,37 @@
   before_script:
     - cd ${PROJECT_DIR}
   script:
-    - docker pull ${IMAGE_NAME} || true
-    - docker build --cache-from ${IMAGE_NAME}:latest -t
-      ${IMAGE_NAME}:${IMAGE_TAG} -t ${IMAGE_NAME}:latest ${TARGET:+--target
-      $TARGET} .
-    - docker push ${IMAGE_NAME}:${IMAGE_TAG}
-    - docker push ${IMAGE_NAME}:latest
+    - echo ${DOCKER_IMAGE}
+    - docker pull ${DOCKER_IMAGE} || true
+    - docker build --cache-from ${DOCKER_IMAGE}:latest -t
+      ${DOCKER_IMAGE}:${DOCKER_IMAGE_TAG} -t ${DOCKER_IMAGE}:latest
+      ${TARGET:+--target $TARGET} -f ${DOCKERFILE_PATH} ${DOCKER_BUILD_CONTEXT}
+    - docker push ${DOCKER_IMAGE}:${DOCKER_IMAGE_TAG}
+    - docker push ${DOCKER_IMAGE}:latest
   variables:
-    IMAGE_NAME: CHANGEME
-    IMAGE_TAG: CHANGEME
+    DOCKER_BUILD_CONTEXT: .
+    DOCKER_IMAGE: CHANGEME
+    DOCKER_IMAGE_TAG: CHANGEME
+    DOCKERFILE_PATH: Dockerfile
     PROJECT_DIR: .
-    TARGET: CHANGEME
 
-# AWS ECR support.
+###############################################################################
+# AWS Elastic Container Registry support.
+#
+# This section is used to build and push Docker images to AWS Elastic Container
+# Registry.
+#
+
+#
+# Build a Docker image and push it to AWS Elastic Container Registry.
+#
+# The following variables are required:
+#
+# - AWS_ACCESS_KEY_ID - AWS access key ID.
+# - AWS_REGION - AWS region.
+# - AWS_SECRET_ACCESS_KEY - AWS secret access key.
+# - ECR_REPOSITORY_URI - AWS Elastic Container Registry repository URI.
+#
 
 .docker_ecr_build:
   before_script:
@@ -32,6 +66,12 @@
   script:
     - !reference [.docker_ecr_login, script]
     - !reference [.docker_build, script]
+  variables:
+    DOCKER_IMAGE: ${ECR_REPOSITORY_URI}
+
+#
+# Initialize runner image to work with AWS Elastic Container Registry.
+#
 
 .docker_ecr_init:
   before_script:
@@ -41,28 +81,17 @@
     name: amazon/aws-cli
     entrypoint: [""]
 
+#
+# Login to AWS Elastic Container Registry.
+#
+
 .docker_ecr_login:
   extends: .docker_ecr_init
   script:
-    - export AWS_ACCESS_KEY_ID=$DOCKER_AWS_ACCESS_KEY_ID
-    - export AWS_SECRET_ACCESS_KEY=$DOCKER_AWS_SECRET_ACCESS_KEY
-    - export AWS_DEFAULT_REGION=$DOCKER_AWS_DEFAULT_REGION
     - aws ecr get-login-password | docker login --username AWS --password-stdin
-      $DOCKER_REGISTRY
+      $ECR_REPOSITORY_URI
   variables:
-    DOCKER_AWS_ACCESS_KEY_ID: CHANGEME
-    DOCKER_AWS_DEFAULT_REGION: CHANGEME
-    DOCKER_AWS_SECRET_ACCESS_KEY: CHANGEME
-    DOCKER_REGISTRY: CHANGEME
-
-# Google Artifact Registry support.
-
-.docker_gcp_ar_login:
-  image:
-    name: docker:latest
-  script:
-    - echo ${KEY_FILE_BASE64} | docker login -u _json_key_base64
-      --password-stdin https://${LOCATION}-docker.pkg.dev
-  variables:
-    KEY_FILE_BASE64: CHANGEME
-    LOCATION: CHANGEME
+    AWS_ACCESS_KEY_ID: CHANGEME
+    AWS_REGION: CHANGEME
+    AWS_SECRET_ACCESS_KEY: CHANGEME
+    ECR_REPOSITORY_URI: CHANGEME
