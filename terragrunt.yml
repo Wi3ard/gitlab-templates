@@ -1,0 +1,124 @@
+###############################################################################
+# Gitlab CI/CD template for Terragrunt.
+#
+
+#
+# Default template to inherit from. Used to define the image used in the other
+# templates.
+#
+
+.terragrunt_default:
+  after_script:
+    - cd ~-
+  image: wi3ard/docker-terraform-gcloud-aws:0.3.3
+
+#
+# Initialize the Terragrunt. This template is intended to be inherited by
+# other templates and normally should not be used directly.
+#
+# The following variables are required:
+#
+# PROJECT_DIR: The directory where the Terragrunt project is located.
+#
+
+.terragrunt_init:
+  before_script:
+    - |
+      echo [*] Environment configuration
+      echo ----------
+      echo AWS_DEFAULT_REGION = ${AWS_DEFAULT_REGION}
+      echo CI_COMMIT_REF_NAME = ${CI_COMMIT_REF_NAME}
+      echo CI_COMMIT_REF_SLUG = ${CI_COMMIT_REF_SLUG}
+      echo CI_ENVIRONMENT_NAME = ${CI_ENVIRONMENT_NAME}
+      echo CI_ENVIRONMENT_SLUG = ${CI_ENVIRONMENT_SLUG}
+      echo PROJECT_DIR = ${PROJECT_DIR}
+      echo ----------
+      echo [*] Terragrunt configuration
+      echo ----------
+    - cd ${PROJECT_DIR}
+    - terragrunt -version
+    - |
+      echo ----------
+      cd ${CI_ENVIRONMENT_NAME}
+  cache:
+    key: ${CI_COMMIT_SHORT_SHA}
+    paths:
+      - ${PROJECT_DIR}/**/.terragrunt-cache
+    policy: pull-push
+    untracked: true
+  extends:
+    - .terragrunt_default
+  script:
+    - echo "$CI_JOB_NAME is used for configuration only, and its script should
+      not be executed"
+    - exit 1
+  variables:
+    PROJECT_DIR: CHANGE_ME
+
+#
+# Check the Terragrunt configuration.
+#
+
+.terragrunt_check:
+  extends: .terragrunt_default
+  script:
+    - cd ${PROJECT_DIR}
+    - terragrunt hclfmt --terragrunt-check --terragrunt-non-interactive
+
+#
+# Validate the Terragrunt configuration.
+#
+
+.terragrunt_validate:
+  extends:
+    - .terragrunt_default
+  script:
+    - cd ${PROJECT_DIR}
+    - terragrunt run-all validate --terragrunt-non-interactive
+
+#
+# Apply the Terragrunt configuration.
+#
+# The following variables are optional:
+#
+# JSON_OUTPUT_FILE: The file to write the JSON Terraform output to.
+#
+
+.terragrunt_apply:
+  artifacts:
+    name: Terraform output
+    paths:
+      - ${PROJECT_DIR}/${CI_ENVIRONMENT_NAME}/**/${JSON_OUTPUT_FILE}
+  cache:
+    policy: pull
+  extends:
+    - .terragrunt_init
+  interruptible: false
+  resource_group: deploy
+  script:
+    - terragrunt run-all apply -input=false --terragrunt-non-interactive
+    - terragrunt run-all output -json --terragrunt-non-interactive >
+      ${JSON_OUTPUT_FILE}
+  variables:
+    JSON_OUTPUT_FILE: output.json
+
+#
+# Destroy the Terragrunt configuration.
+#
+
+.terragrunt_destroy:
+  cache:
+    policy: pull
+  environment:
+    action: stop
+  extends:
+    - .terragrunt_init
+  interruptible: false
+  resource_group: deploy
+  rules:
+    - when: manual
+  script:
+    - terragrunt run-all destroy -input=false --terragrunt-non-interactive
+      --terragrunt-ignore-external-dependencies
+  variables:
+    GIT_STRATEGY: none
