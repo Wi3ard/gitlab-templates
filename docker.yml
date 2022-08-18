@@ -95,3 +95,49 @@
     AWS_REGION: CHANGE_ME
     AWS_SECRET_ACCESS_KEY: CHANGE_ME
     ECR_REPOSITORY_URI: CHANGE_ME
+
+###############################################################################
+# GitLab Container Registry support.
+#
+# This section is used to build and push Docker images to GitLab Container
+# Registry.
+#
+
+#
+# Initialize runner image to work with the support for GitLab Container
+# Registry.
+#
+
+.docker_gitlab_init:
+  image:
+    name: docker:latest
+    entrypoint: [""]
+  services:
+    - docker:dind
+  variables:
+    DOCKER_DRIVER: overlay
+
+#
+# Login to GitLab Container Registry.
+#
+
+.docker_gitlab_login:
+  extends: .docker_gitlab_init
+  script:
+    - docker login $CI_REGISTRY -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD
+
+#
+# Build a Docker image and push it to GitLab Container Registry.
+#
+
+.docker_gitlab_build:
+  before_script:
+    - !reference [.docker_build, before_script]
+  extends:
+    - .docker_build
+    - .docker_gitlab_login
+  script:
+    - !reference [.docker_gitlab_login, script]
+    - !reference [.docker_build, script]
+  variables:
+    DOCKER_IMAGE: ${CI_REGISTRY_IMAGE}
