@@ -8,7 +8,7 @@
 #
 
 .hashicorp_vault_default:
-  image: wi3ard/docker-terraform-gcloud-aws:0.3.3
+  image: wi3ard/docker-terraform-gcloud-aws:0.3.4
 
 #
 # Fetches AWS credentials from the Vault server and exports them as environment

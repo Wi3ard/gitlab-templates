@@ -10,7 +10,7 @@
 .terragrunt_default:
   after_script:
     - cd ~-
-  image: wi3ard/docker-terraform-gcloud-aws:0.3.3
+  image: wi3ard/docker-terraform-gcloud-aws:0.3.4
 
 #
 # Initialize the Terragrunt. This template is intended to be inherited by
