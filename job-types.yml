@@ -25,10 +25,10 @@
 
 .test_job:
   rules:
-    - if: '$CI_COMMIT_BRANCH !~ /^master|develop\/.*|release\/.*$/'
+    - if: '$CI_COMMIT_BRANCH !~ /^master|develop|release\/.*$/'
 
 .test_job_manual:
   rules:
-    - if: '$CI_COMMIT_BRANCH !~ /^master|develop\/.*|release\/.*$/'
+    - if: '$CI_COMMIT_BRANCH !~ /^master|develop|release\/.*$/'
       when: manual
       allow_failure: true
